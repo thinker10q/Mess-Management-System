@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 248 250 252;
+  --foreground: 15 23 42;
+}
+
+html, body { height: 100%; }
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
+.btn-secondary { @apply btn bg-slate-200 text-slate-900 hover:bg-slate-300; }
+.btn-danger { @apply btn bg-rose-600 text-white hover:bg-rose-700; }
+.btn-ghost { @apply btn bg-transparent text-slate-700 hover:bg-slate-100; }
+
+.input {
+  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+}
+
+.card {
+  @apply rounded-2xl bg-white p-6 shadow-sm border border-slate-200;
+}
+
+table.matrix {
+  @apply w-full border-collapse text-sm;
+}
+table.matrix th, table.matrix td {
+  @apply border border-slate-200 px-2 py-1 text-center;
+}
+table.matrix th { @apply bg-slate-100 font-semibold sticky top-0 z-10; }
+table.matrix td.locked { @apply bg-slate-100 text-slate-400; }
+table.matrix td.today  { @apply bg-amber-50; }
+table.matrix td.past   { @apply bg-slate-50 text-slate-500; }
+table.matrix td input {
+  @apply w-12 text-center border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-500/30 rounded;
+}
+table.matrix.matrix-days th:first-child,
+table.matrix.matrix-days td:first-child {
+  @apply whitespace-nowrap;
+}
+table.matrix.matrix-days thead th:not(:first-child):not(:nth-last-child(-n+2)) {
+  @apply min-w-[5.5rem];
+}
+table.matrix td.complete { @apply bg-emerald-50; }

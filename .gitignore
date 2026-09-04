@@ -1,0 +1,53 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+*.out
+*.err
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Node / Next
+node_modules/
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# Env / secrets — never commit
+.env
+.env.local
+.env.*.local
+.env.production
+
+# venv / build artifacts
+venv/
+venv-*/
+.venv/
+dist/
+build/
+
+# Coverage / test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Misc
+*.swp
+*.tmp
+
+# Local sqlite dev db
+*.db
+
+# Local embeddings cache
+.puku/
