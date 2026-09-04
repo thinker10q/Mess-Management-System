@@ -154,7 +154,7 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
 
       {markets.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="sticky-first w-full text-sm">
             <thead className="bg-slate-100">
               <tr>
                 <th className="px-2 py-1 text-left">Date</th>

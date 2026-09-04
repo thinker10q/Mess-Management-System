@@ -239,6 +239,9 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
           <p className="mt-1 text-[11px] text-slate-500">
             Edit unlocked cells — values auto-save. Past days lock at midnight. Admins can edit locked cells.
           </p>
+          <p className="mt-1 text-[11px] font-medium text-brand-700 sm:hidden">
+            Swipe sideways to see all members — the date stays fixed.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {messDay > 0 && (
@@ -283,8 +286,10 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
           <tr>
             <th className="text-left">তারিখ</th>
             {members.map((m) => (
-              <th key={m.id} className="text-center">
-                {m.name}
+              <th key={m.id} className="text-center" title={m.name}>
+                <span className="block max-w-[5rem] truncate sm:max-w-none sm:whitespace-normal">
+                  {m.name}
+                </span>
               </th>
             ))}
             <th className="text-center">মোট</th>

@@ -298,7 +298,7 @@ export default function MessMembersPage() {
             <p className="text-sm text-slate-500">No members found.</p>
           )}
           {filtered.length > 0 && (
-            <table className="w-full text-sm">
+            <table className="sticky-first w-full text-sm">
               <thead className="bg-slate-100">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>

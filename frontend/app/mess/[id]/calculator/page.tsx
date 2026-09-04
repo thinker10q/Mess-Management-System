@@ -220,7 +220,7 @@ export default function MessCalculatorPage() {
 
             <div className="card overflow-x-auto">
               <h3 className="mb-3 text-lg font-semibold">Member balances</h3>
-              <table className="w-full text-sm">
+              <table className="sticky-first w-full text-sm">
                 <thead className="bg-slate-100">
                   <tr>
                     <th className="px-3 py-2 text-left">Member</th>
