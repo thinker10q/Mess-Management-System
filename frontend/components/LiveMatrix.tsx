@@ -194,7 +194,18 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
       const latest = latestValue.current[key] ?? value;
       delete debounceTimers.current[key];
       saveCell.mutate({ memberId, date, value: latest });
-    }, 600);
+    }, 350);
+  };
+
+  const flushCellNow = (memberId: number, date: string, value: string) => {
+    // Immediate save (Enter key / Go button): cancel debounce and POST at once.
+    const key = `${memberId}::${date}`;
+    if (debounceTimers.current[key]) {
+      clearTimeout(debounceTimers.current[key]);
+      delete debounceTimers.current[key];
+    }
+    delete latestValue.current[key];
+    onCellBlur(memberId, date, value);
   };
 
   const onCellBlur = (memberId: number, date: string, value: string) => {
@@ -376,6 +387,14 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
                       value={cellValue(m.id, d)}
                       onChange={(e) => onCellChange(m.id, d, e.target.value)}
                       onBlur={(e) => onCellBlur(m.id, d, e.target.value)}
+                      onKeyDown={(e) => {
+                        // Enter / Go on mobile keyboard saves immediately
+                        // instead of waiting for the debounce.
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          flushCellNow(m.id, d, (e.target as HTMLInputElement).value);
+                        }
+                      }}
                       placeholder="0"
                       title={locked && isAdmin ? "Admin override: lock is bypassed for editing" : undefined}
                     />

@@ -30,6 +30,7 @@ export function QrShareCard({ messId, messName, code, qrPath, qrLoading }: Props
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgBroken, setImgBroken] = useState(false);
 
   const qrUrl = qrPath ? `${API_BASE}${qrPath}` : null;
   const joinLink =
@@ -41,6 +42,7 @@ export function QrShareCard({ messId, messName, code, qrPath, qrLoading }: Props
     mutationFn: () => regenerateMessQr(messId),
     onSuccess: () => {
       setError(null);
+      setImgBroken(false);
       qc.invalidateQueries({ queryKey: ["mess", messId] });
     },
     onError: (e) => setError(extractError(e, "Could not regenerate QR.")),
@@ -107,12 +109,15 @@ export function QrShareCard({ messId, messName, code, qrPath, qrLoading }: Props
         </div>
       )}
 
-      {!qrLoading && qrUrl && (
+      {!qrLoading && qrUrl && !imgBroken && (
         <div className="flex flex-col items-start gap-3">
           <img
             src={qrUrl}
             alt={`QR for ${messName ?? "mess"}`}
             className="h-44 w-44 rounded-lg border border-white bg-white p-2"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setImgBroken(true)}
           />
           <p className="break-all text-xs text-slate-500">
             Join link: <span className="font-mono">{joinLink}</span>
@@ -152,6 +157,38 @@ export function QrShareCard({ messId, messName, code, qrPath, qrLoading }: Props
               disabled={regenMut.isPending}
               title="Rebuild the QR (use after changing the code)"
               className="btn-secondary inline-flex items-center gap-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {regenMut.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Regenerate
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!qrLoading && qrUrl && imgBroken && (
+        <div className="space-y-2">
+          <p className="text-sm text-amber-700">
+            QR image is missing on the server (it is wiped on backend redeploy).
+            Tap Regenerate to rebuild it.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={qrUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary inline-flex items-center gap-1 text-sm"
+            >
+              Open QR link
+            </a>
+            <button
+              type="button"
+              onClick={() => regenMut.mutate()}
+              disabled={regenMut.isPending}
+              className="btn-primary inline-flex items-center gap-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {regenMut.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
