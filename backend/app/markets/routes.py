@@ -27,6 +27,26 @@ def _ensure_chart(db: Session, chart_id: int, mess_id: int) -> Chart:
     return chart, valid
 
 
+def _to_out(entry: MarketEntry, name_by_member: dict) -> MarketOut:
+    """Serialize with member_name so every bazar row shows who paid."""
+    return MarketOut(
+        id=entry.id,
+        chart_id=entry.chart_id,
+        member_id=entry.member_id,
+        member_name=name_by_member.get(entry.member_id),
+        date=entry.date,
+        amount=entry.amount,
+        description=entry.description,
+    )
+
+
+def _name_map(db: Session, member_ids: set) -> dict:
+    if not member_ids:
+        return {}
+    rows = db.query(Member).filter(Member.id.in_(member_ids)).all()
+    return {m.id: m.name for m in rows}
+
+
 @router.post("", response_model=MarketOut, status_code=status.HTTP_201_CREATED)
 def add_market_entry(
     mess_id: int,
@@ -61,7 +81,7 @@ def add_market_entry(
     db.add(entry)
     db.commit()
     db.refresh(entry)
-    return entry
+    return _to_out(entry, _name_map(db, {entry.member_id}))
 
 
 @router.get("", response_model=list[MarketOut])
@@ -78,7 +98,7 @@ def list_market_entries(
         .order_by(MarketEntry.date.asc(), MarketEntry.id.asc())
         .all()
     )
-    return rows
+    return [_to_out(r, _name_map(db, {r.member_id for r in rows})) for r in rows]
 
 
 @router.patch("/{entry_id}", response_model=MarketOut)
@@ -106,7 +126,7 @@ def update_market_entry(
         entry.date = payload.date
     db.commit()
     db.refresh(entry)
-    return entry
+    return _to_out(entry, _name_map(db, {entry.member_id}))
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)

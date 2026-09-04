@@ -141,6 +141,11 @@ def create_chart(
             label = label.strip()
             if label:
                 names.append(label)
+    # Always include the mess manager: the creator is a mess member too, so
+    # their name must be on every chart even when the admin types custom names.
+    manager_name = (mess.manager_name or "").strip()
+    if manager_name and manager_name.lower() not in {n.lower() for n in names}:
+        names.append(manager_name)
     for name in names:
         clean = (name or "").strip()
         if not clean or clean.lower() in seen:

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Loader2, Plus } from "lucide-react";
-import { createChart, extractError } from "@/lib/api";
+import { createChart, extractError, fetchMess } from "@/lib/api";
 
 interface Props {
   messId: number;
@@ -21,6 +21,18 @@ export function CreateChartCard({ messId }: Props) {
   const [membersText, setMembersText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
+
+  // Auto-fill the manager's name: the mess creator is a mess member too.
+  const messQuery = useQuery({
+    queryKey: ["mess", messId],
+    queryFn: () => fetchMess(messId),
+    retry: false,
+  });
+  const managerName = (messQuery.data?.manager_name || "").trim();
+  useEffect(() => {
+    if (managerName && !membersText) setMembersText(managerName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managerName]);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -113,6 +125,7 @@ export function CreateChartCard({ messId }: Props) {
             placeholder={"Alice\nBob\nCharlie"}
           />
           <p className="mt-1 text-xs text-slate-500">
+            Manager is filled in automatically and always kept on the chart.
             Leave empty to auto-use every mess member. Every name is also
             created in Members automatically, and any bazar update refreshes
             totals live.

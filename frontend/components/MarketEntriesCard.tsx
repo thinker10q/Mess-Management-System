@@ -194,7 +194,7 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
               {markets.map((e) => (
                 <tr key={e.id} className="border-b">
                   <td className="px-2 py-1">{e.date}</td>
-                  <td className="px-2 py-1">{e.member_name}</td>
+                  <td className="px-2 py-1">{e.member_name || `Member #${e.member_id}`}</td>
                   <td className="px-2 py-1 text-right font-mono">
                     {e.amount.toFixed(2)}
                   </td>
