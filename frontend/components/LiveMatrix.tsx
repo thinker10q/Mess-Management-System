@@ -166,10 +166,12 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
 
   // ----- Per-cell debounce -----
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const latestValue = useRef<Record<string, string>>({});
   useEffect(() => {
     return () => {
       Object.values(debounceTimers.current).forEach(clearTimeout);
       debounceTimers.current = {};
+      latestValue.current = {};
     };
   }, [chartId]);
 
@@ -177,21 +179,49 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
     if (lockedSet.has(date) && !isAdmin) return; // members can't bypass a lock.
     setCellDraft(memberId, date, value);
     const key = `${memberId}::${date}`;
+    latestValue.current[key] = value;
     if (debounceTimers.current[key]) clearTimeout(debounceTimers.current[key]);
+    // Don't auto-save intermediate states: empty string (user cleared the cell
+    // to retype) or non-numeric text would otherwise save 0 and look like the
+    // value was "automatically deleted". Only auto-save valid numbers; empty
+    // cells are saved as 0 explicitly on blur.
+    const trimmed = value.trim();
+    if (trimmed === "") return;
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n < 0 || n > 10) return;
     debounceTimers.current[key] = setTimeout(() => {
-      saveCell.mutate({ memberId, date, value });
+      // Use the latest typed value at fire time, not the stale closure value.
+      const latest = latestValue.current[key] ?? value;
+      delete debounceTimers.current[key];
+      saveCell.mutate({ memberId, date, value: latest });
     }, 600);
   };
 
-  const onCellBlur = (memberId: number, date: string) => {
-    // Flush any pending debounce immediately.
+  const onCellBlur = (memberId: number, date: string, value: string) => {
+    // Flush any pending debounce immediately using the exact value from the
+    // blur event (reading from state here would be stale due to batching).
     const key = `${memberId}::${date}`;
     if (debounceTimers.current[key]) {
       clearTimeout(debounceTimers.current[key]);
       delete debounceTimers.current[key];
-      const value = cellValue(memberId, date);
-      saveCell.mutate({ memberId, date, value });
     }
+    delete latestValue.current[key];
+    // If the draft already matches the server value, skip the request.
+    const serverRaw = view?.meals_by_member_date?.[String(memberId)]?.[date];
+    const serverStr = serverRaw === undefined || serverRaw === null ? "" : String(serverRaw);
+    if (value === serverStr) {
+      // Still clear any leftover draft for this cell.
+      setDraft((prev) => {
+        const next = { ...prev };
+        const memberDraft = { ...(next[String(memberId)] || {}) };
+        delete memberDraft[date];
+        if (Object.keys(memberDraft).length === 0) delete next[String(memberId)];
+        else next[String(memberId)] = memberDraft;
+        return next;
+      });
+      return;
+    }
+    saveCell.mutate({ memberId, date, value });
   };
 
   const lastUpdated = useMemo(() => {
@@ -345,7 +375,7 @@ export function LiveMatrix({ messId, chartId, pollMs = 5000, isAdmin = false }: 
                       readOnly={locked && !isAdmin}
                       value={cellValue(m.id, d)}
                       onChange={(e) => onCellChange(m.id, d, e.target.value)}
-                      onBlur={() => onCellBlur(m.id, d)}
+                      onBlur={(e) => onCellBlur(m.id, d, e.target.value)}
                       placeholder="0"
                       title={locked && isAdmin ? "Admin override: lock is bypassed for editing" : undefined}
                     />

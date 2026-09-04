@@ -21,6 +21,16 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Mobile keyboards may emit commas or Bengali digits for decimals.
+// Normalize to a plain dot-decimal string before Number().
+function parseAmount(raw: string): number {
+  const normalized = (raw || "")
+    .trim()
+    .replace(/,/g, ".")
+    .replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
+  return Number(normalized);
+}
+
 export function MarketEntriesCard({ messId, chartId }: Props) {
   const qc = useQueryClient();
   const [memberId, setMemberId] = useState<string>("");
@@ -42,14 +52,20 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
   });
 
   const createMut = useMutation({
-    mutationFn: () =>
-      createMarket(messId, chartId, {
+    mutationFn: () => {
+      if (!memberId) throw new Error("Select a member first");
+      const amountNum = parseAmount(amount);
+      if (!Number.isFinite(amountNum) || amountNum <= 0) {
+        throw new Error("Enter an amount greater than 0");
+      }
+      return createMarket(messId, chartId, {
         chart_id: chartId,
         member_id: Number(memberId),
         date,
-        amount: Number(amount),
+        amount: amountNum,
         description: description.trim() || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       setAmount("");
       setDescription("");
@@ -108,9 +124,10 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
           required
         />
         <input
-          type="number"
-          step="0.01"
-          min="0"
+          type="text"
+          inputMode="decimal"
+          enterKeyHint="done"
+          autoComplete="off"
           className="input"
           placeholder="Amount"
           value={amount}
@@ -122,11 +139,20 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
           placeholder="Description (optional)"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          enterKeyHint="go"
+          onKeyDown={(e) => {
+            // Some mobile keyboards fire Enter without submitting when the
+            // submit button is disabled; submit explicitly instead.
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (!createMut.isPending) createMut.mutate();
+            }
+          }}
         />
         <button
           type="submit"
           className="btn-primary sm:col-span-4"
-          disabled={createMut.isPending || !memberId || !amount}
+          disabled={createMut.isPending}
         >
           {createMut.isPending ? (
             <>
