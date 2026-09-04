@@ -130,7 +130,6 @@ def create_chart(
     names = [(n or "").strip() for n in (payload.member_names or [])]
     names = [n for n in names if n]
     if not names:
-        from app.database.models import MessMember
         mms = (
             db.query(MessMember)
             .filter(MessMember.mess_id == mess_id)
