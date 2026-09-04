@@ -27,6 +27,15 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Mobile keyboards may emit commas or Bengali digits for decimals.
+function parseAmountInput(raw: string): number {
+  const normalized = (raw || "")
+    .trim()
+    .replace(/,/g, ".")
+    .replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
+  return Number(normalized);
+}
+
 type CellState = "idle" | "saving" | "saved" | "error";
 
 export default function MessBazarPage() {
@@ -218,7 +227,8 @@ export default function MessBazarPage() {
     return set;
   }, [markets, date]);
 
-  // Validate-and-save for a single row, triggered only by pressing Enter.
+  // Validate-and-save for a single row, triggered by Enter key or the
+  // per-row Add button (needed on mobile where Enter may not exist).
   // Performs layered dedupe checks so it can never create a duplicate entry
   // regardless of how many times it is invoked.
   const performSave = (memberId: number) => {
@@ -235,7 +245,7 @@ export default function MessBazarPage() {
       });
       return;
     }
-    const amt = Number(raw);
+    const amt = parseAmountInput(raw);
     if (!Number.isFinite(amt) || amt <= 0) {
       setErrors((p) => ({
         ...p,
@@ -252,7 +262,7 @@ export default function MessBazarPage() {
     // Dedupe 3: if this (member, amount) already exists on the server for
     // today's date, don't POST again. This catches any path that wasn't
     // covered by refs (e.g. remount, page refresh, stale event).
-    if (existingAmounts.has(`${memberId}:${Number(raw).toFixed(2)}`)) {
+    if (existingAmounts.has(`${memberId}:${parseAmountInput(raw).toFixed(2)}`)) {
       lastPostedAmount.current[memberId] = raw;
       return;
     }
@@ -274,14 +284,17 @@ export default function MessBazarPage() {
     );
   };
 
-  // Manual save: nothing is posted while typing or on blur. Only pressing
-  // Enter inside an amount field saves the entry.
+  // Manual save: nothing is posted while typing or on blur. Pressing Enter
+  // inside an amount field OR tapping the per-row Add button saves the entry.
   const flushSave = (memberId: number) => {
     // Fast-path: empty or unchanged value -> don't even call performSave.
     const raw = (amountsRef.current[memberId] ?? "").trim();
-    if (!raw) return;
+    if (!raw) {
+      performSave(memberId); // surfaces "enter amount" idle state / clears error
+      return;
+    }
     if (lastPostedAmount.current[memberId] === raw) return;
-    if (existingAmounts.has(`${memberId}:${Number(raw).toFixed(2)}`)) {
+    if (existingAmounts.has(`${memberId}:${parseAmountInput(raw).toFixed(2)}`)) {
       lastPostedAmount.current[memberId] = raw;
       return;
     }
@@ -441,9 +454,10 @@ export default function MessBazarPage() {
                 </div>
                 <div className="flex flex-col gap-2">
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
+                    inputMode="decimal"
+                    enterKeyHint="go"
+                    autoComplete="off"
                     placeholder={editable ? "Amount (0.00)" : "Locked"}
                     disabled={!editable}
                     className="input disabled:cursor-not-allowed disabled:bg-slate-50"
@@ -466,13 +480,29 @@ export default function MessBazarPage() {
                       }))
                     }
                   />
+                  <button
+                    type="button"
+                    disabled={!editable || state === "saving"}
+                    onClick={() => flushSave(m.id)}
+                    className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {state === "saving" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Adding...
+                      </span>
+                    ) : state === "saved" ? (
+                      "Added ✓"
+                    ) : (
+                      "Add entry"
+                    )}
+                  </button>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   {errors[m.id] && state !== "saving" ? (
                     <span className="text-rose-600">{errors[m.id]}</span>
                   ) : (
                     <span className="text-slate-400">
-                      {editable ? "press Enter to save" : "only this member can edit"}
+                      {editable ? "tap Add entry or press Enter" : "only this member can edit"}
                     </span>
                   )}
                   {renderCellIndicator(m.id)}
@@ -526,9 +556,10 @@ export default function MessBazarPage() {
                     </td>
                     <td className="px-3 py-2">
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        inputMode="decimal"
+                        enterKeyHint="go"
+                        autoComplete="off"
                         placeholder={editable ? "0.00" : "Locked"}
                         disabled={!editable}
                         className="input w-32 disabled:cursor-not-allowed disabled:bg-slate-50"
@@ -559,7 +590,19 @@ export default function MessBazarPage() {
                         }
                       />
                     </td>
-                    <td className="px-3 py-2">{renderCellIndicator(m.id)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!editable || state === "saving"}
+                          onClick={() => flushSave(m.id)}
+                          className="btn-primary px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {state === "saving" ? "Adding..." : state === "saved" ? "Added ✓" : "Add"}
+                        </button>
+                        {renderCellIndicator(m.id)}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
