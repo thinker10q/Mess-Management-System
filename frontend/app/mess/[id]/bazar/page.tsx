@@ -168,6 +168,15 @@ export default function MessBazarPage() {
 
   const markets: MarketOut[] = marketsQuery.data ?? [];
 
+  // Original entered name per bazar row: server member_name first, then the
+  // chart member list (names entered at chart creation). Never blank.
+  const nameById = useMemo(
+    () => Object.fromEntries(members.map((m) => [m.id, m.name])),
+    [members]
+  );
+  const displayName = (e: MarketOut) =>
+    e.member_name || nameById[e.member_id] || `Member #${e.member_id}`;
+
   // Today's totals per member for quick reference.
   const todayTotals = useMemo(() => {
     const sums: Record<number, number> = {};
@@ -604,7 +613,7 @@ export default function MessBazarPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-sm">
-                      <div className="font-medium">{e.member_name}</div>
+                      <div className="font-medium">{displayName(e)}</div>
                       <div className="text-xs text-slate-500">
                         {e.date}
                         {e.description ? ` - ${e.description}` : ""}
@@ -645,7 +654,7 @@ export default function MessBazarPage() {
                   {markets.map((e) => (
                     <tr key={e.id} className="border-b">
                       <td className="px-2 py-1">{e.date}</td>
-                      <td className="px-2 py-1">{e.member_name}</td>
+                      <td className="px-2 py-1">{displayName(e)}</td>
                       <td className="px-2 py-1 text-right font-mono">
                         {e.amount.toFixed(2)}
                       </td>

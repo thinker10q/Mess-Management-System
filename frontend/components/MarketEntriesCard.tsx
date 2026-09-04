@@ -88,6 +88,12 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
 
   const members = chartQuery.data?.members ?? [];
   const markets: MarketOut[] = marketsQuery.data ?? [];
+  // Original entered name: prefer server member_name, fall back to the chart
+  // member list (same names entered at chart creation), so rows never show
+  // "Member #id" or blank even if the backend hasn't deployed the fix yet.
+  const nameById = Object.fromEntries(members.map((m) => [m.id, m.name]));
+  const displayName = (e: MarketOut) =>
+    e.member_name || nameById[e.member_id] || `Member #${e.member_id}`;
 
   return (
     <div className="card">
@@ -194,7 +200,7 @@ export function MarketEntriesCard({ messId, chartId }: Props) {
               {markets.map((e) => (
                 <tr key={e.id} className="border-b">
                   <td className="px-2 py-1">{e.date}</td>
-                  <td className="px-2 py-1">{e.member_name || `Member #${e.member_id}`}</td>
+                  <td className="px-2 py-1">{displayName(e)}</td>
                   <td className="px-2 py-1 text-right font-mono">
                     {e.amount.toFixed(2)}
                   </td>
